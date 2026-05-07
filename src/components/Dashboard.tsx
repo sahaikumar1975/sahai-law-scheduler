@@ -19,17 +19,27 @@ export default function Dashboard() {
   }, []);
 
   const fetchData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) console.error('Error fetching user:', userError);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-    let { data: fetchedTasks } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
-    let { data: fetchedReading } = await supabase.from('reading_list').select('*').order('created_at', { ascending: false });
+      let { data: fetchedTasks, error: tasksError } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+      if (tasksError) console.error('Error fetching tasks:', tasksError);
 
+      let { data: fetchedReading, error: readingError } = await supabase.from('reading_list').select('*').order('created_at', { ascending: false });
+      if (readingError) console.error('Error fetching reading list:', readingError);
 
-
-    if (fetchedTasks) setClients(fetchedTasks);
-    if (fetchedReading) setReadingList(fetchedReading);
-    setLoading(false);
+      if (fetchedTasks) setClients(fetchedTasks);
+      if (fetchedReading) setReadingList(fetchedReading);
+    } catch (error) {
+      console.error('Unexpected error in fetchData:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleReminder = async (id: string, currentVal: boolean) => {
