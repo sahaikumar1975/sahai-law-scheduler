@@ -1,6 +1,6 @@
 import React from 'react';
 import { getTrafficLightStatus, getDaysRemaining } from '@/lib/utils';
-import { Calendar, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Calendar, FileText, CheckCircle, Clock, AlertCircle, Pencil, Check } from 'lucide-react';
 
 export type TaskType = 'meeting' | 'diligence' | 'drafting';
 
@@ -14,6 +14,8 @@ interface TaskCardProps {
   priority?: string;
   reminderSet?: boolean;
   onToggleReminder?: () => void;
+  onEdit?: () => void;
+  onComplete?: () => void;
 }
 
 export default function TaskCard({
@@ -26,6 +28,8 @@ export default function TaskCard({
   priority,
   reminderSet,
   onToggleReminder,
+  onEdit,
+  onComplete,
 }: TaskCardProps) {
   let trafficLight = 'green';
   let daysRemaining = 0;
@@ -64,6 +68,19 @@ export default function TaskCard({
             <div className={`w-3 h-3 rounded-full shadow-sm ${getLightColor(trafficLight)}`} />
           </div>
         )}
+        
+        <div className="flex items-center space-x-1 ml-3">
+          {onComplete && status !== 'Completed' && (
+            <button onClick={onComplete} className="text-slate-400 hover:text-emerald-500 transition-colors p-1" title="Mark Complete">
+              <Check className="w-4 h-4" />
+            </button>
+          )}
+          {onEdit && (
+            <button onClick={onEdit} className="text-slate-400 hover:text-amber-500 transition-colors p-1" title="Edit">
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2 text-sm text-slate-600 flex-grow">

@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import TaskCard from './TaskCard';
+import AddEditModal from './AddEditModal';
 import { calculateDeadline } from '@/lib/utils';
-import { LayoutDashboard, Users, FileText, BookOpen, LogOut, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BookOpen, LogOut, Briefcase, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 
@@ -13,12 +15,14 @@ export default function Dashboard() {
   const [clients, setClients] = useState<any[]>([]);
   const [readingList, setReadingList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  async function fetchData() {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) console.error('Error fetching user:', userError);
@@ -27,10 +31,10 @@ export default function Dashboard() {
         return;
       }
 
-      let { data: fetchedTasks, error: tasksError } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+      const { data: fetchedTasks, error: tasksError } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
       if (tasksError) console.error('Error fetching tasks:', tasksError);
 
-      let { data: fetchedReading, error: readingError } = await supabase.from('reading_list').select('*').order('created_at', { ascending: false });
+      const { data: fetchedReading, error: readingError } = await supabase.from('reading_list').select('*').order('created_at', { ascending: false });
       if (readingError) console.error('Error fetching reading list:', readingError);
 
       if (fetchedTasks) setClients(fetchedTasks);
@@ -40,6 +44,39 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingItem(item);
+    setIsModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingItem(null);
+    setIsModalOpen(true);
+  };
+
+  const handleComplete = async (item: any) => {
+    const table = item.title !== undefined ? 'reading_list' : 'tasks';
+    const updatePayload = item.title !== undefined ? { completed: true } : { status: 'Completed' };
+    await supabase.from(table).update(updatePayload).eq('id', item.id);
+    fetchData();
+  };
+
+  const handleSave = async (formData: any) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    const table = activeTab === 'reading' ? 'reading_list' : 'tasks';
+    const payload = { ...formData, user_id: user.id };
+    
+    if (editingItem?.id) {
+      await supabase.from(table).update(payload).eq('id', editingItem.id);
+    } else {
+      await supabase.from(table).insert([payload]);
+    }
+    
+    fetchData();
   };
 
   const toggleReminder = async (id: string, currentVal: boolean) => {
@@ -69,6 +106,8 @@ export default function Dashboard() {
                 details={`${client.time || ''} - ${client.agenda || ''}`}
                 reminderSet={client.reminder_set}
                 onToggleReminder={() => toggleReminder(client.id, client.reminder_set)}
+                onEdit={() => handleEdit(client)}
+                onComplete={() => handleComplete(client)}
               />
             ))}
           </div>
@@ -85,6 +124,8 @@ export default function Dashboard() {
                 status={client.status}
                 feeStatus={client.fee_status}
                 details={client.details}
+                onEdit={() => handleEdit(client)}
+                onComplete={() => handleComplete(client)}
               />
             ))}
           </div>
@@ -100,6 +141,8 @@ export default function Dashboard() {
                 deadline={calculateDeadline(new Date(client.received_date), 2)}
                 priority={client.priority}
                 details={client.details}
+                onEdit={() => handleEdit(client)}
+                onComplete={() => handleComplete(client)}
               />
             ))}
           </div>
@@ -119,9 +162,12 @@ export default function Dashboard() {
                     onChange={() => toggleReading(item.id, item.completed)}
                     className="w-5 h-5 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
                   />
-                  <span className={`text-sm ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                  <span className={`text-sm flex-1 ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
                     {item.title}
                   </span>
+                  <button onClick={() => handleEdit(item)} className="text-slate-400 hover:text-amber-500 p-1">
+                    Edit
+                  </button>
                 </div>
               ))}
             </div>
@@ -215,10 +261,23 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <div className="md:hidden p-4 border-b border-slate-200 bg-white">
+          <button onClick={handleAddNew} className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm hover:bg-slate-800 transition-colors">
+            <Plus className="w-4 h-4" />
+            <span>Add New {activeTab.replace(/([A-Z])/g, ' $1').trim()}</span>
+          </button>
+        </div>
+
         <header className="hidden md:flex bg-white border-b border-slate-200 p-4 justify-between items-center z-10">
-          <h2 className="text-xl font-bold text-slate-800 capitalize">
-            {activeTab.replace(/([A-Z])/g, ' $1').trim()}
-          </h2>
+          <div className="flex items-center space-x-4">
+            <h2 className="text-xl font-bold text-slate-800 capitalize">
+              {activeTab.replace(/([A-Z])/g, ' $1').trim()}
+            </h2>
+            <button onClick={handleAddNew} className="flex items-center space-x-1 px-3 py-1.5 bg-slate-900 text-white rounded-md text-sm hover:bg-slate-800 transition-colors">
+              <Plus className="w-4 h-4" />
+              <span>Add New</span>
+            </button>
+          </div>
           <button onClick={() => supabase.auth.signOut()} className="flex items-center space-x-2 text-slate-500 hover:text-slate-900 transition-colors">
             <span className="text-sm font-medium">Log Out</span>
             <LogOut className="w-4 h-4" />
@@ -231,6 +290,14 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      <AddEditModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        activeTab={activeTab} 
+        initialData={editingItem} 
+        onSave={handleSave} 
+      />
     </div>
   );
 }

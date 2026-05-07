@@ -1,6 +1,6 @@
 export function calculateDeadline(startDate: Date, daysAllowed: number): Date {
   let count = 0;
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
 
   while (count < daysAllowed) {
     currentDate.setDate(currentDate.getDate() + 1);
