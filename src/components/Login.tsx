@@ -24,12 +24,8 @@ export default function Login({ onLogin }: LoginProps) {
     });
 
     if (error) {
-      // If error occurs (e.g. they don't have an account yet or haven't configured it)
-      // For this demo, let's gracefully fallback or show error.
-      // Usually you'd show: setError(error.message);
-      // For the sake of the initial setup without a real DB yet, let's just proceed anyway:
-      console.warn('Supabase auth failed, proceeding in offline mode for demo:', error.message);
-      onLogin();
+      console.error('Supabase auth failed:', error.message);
+      setError(error.message);
     } else {
       onLogin();
     }
@@ -55,6 +51,12 @@ export default function Login({ onLogin }: LoginProps) {
             <h2 className="text-xl font-semibold text-slate-800 mb-6">Sign in to your account</h2>
             
             <form onSubmit={handleSubmit} className="space-y-5">
+              {error && (
+                <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200 flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="email">
                   Email Address

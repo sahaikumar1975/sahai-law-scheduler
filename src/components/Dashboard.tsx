@@ -71,9 +71,11 @@ export default function Dashboard() {
     const payload = { ...formData, user_id: user.id };
     
     if (editingItem?.id) {
-      await supabase.from(table).update(payload).eq('id', editingItem.id);
+      const { error } = await supabase.from(table).update(payload).eq('id', editingItem.id);
+      if (error) console.error("Update error:", error);
     } else {
-      await supabase.from(table).insert([payload]);
+      const { error } = await supabase.from(table).insert([payload]);
+      if (error) console.error("Insert error:", error);
     }
     
     fetchData();
